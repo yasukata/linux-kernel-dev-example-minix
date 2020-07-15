@@ -9,6 +9,20 @@
 
 #include "minix.h"
 
+#include <linux/uio.h>
+#include <linux/moduleparam.h>
+
+static long syscall_write_bytes;
+module_param(syscall_write_bytes, long, 0444);
+
+static ssize_t minix_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
+{
+	syscall_write_bytes += from->count;
+	printk(KERN_INFO "write %ld bytes, current total %ld bytes\n",
+			from->count, syscall_write_bytes);
+	return generic_file_write_iter(iocb, from);
+}
+
 /*
  * We have mostly NULLs here: the current defaults are OK for
  * the minix filesystem.
@@ -16,7 +30,7 @@
 const struct file_operations minix_file_operations = {
 	.llseek		= generic_file_llseek,
 	.read_iter	= generic_file_read_iter,
-	.write_iter	= generic_file_write_iter,
+	.write_iter	= minix_file_write_iter,
 	.mmap		= generic_file_mmap,
 	.fsync		= generic_file_fsync,
 	.splice_read	= generic_file_splice_read,
